@@ -7,11 +7,14 @@
 #include <linux/uinput.h>
 
 static void setup_abs(int fd, unsigned chan, int min, int max);
+int read_event(int fd, struct js_event *event);
+void print_event(struct js_event event);
 
 int main(void) {
 	int in_joy_1, /*in_joy_2,*/ uinput;
 	//struct axis_state axes[4] = {0};
 	struct uinput_setup usetup;
+	struct js_event ev;
 
 	/**** This has to be changed for the autodetection and auto pairing ****/
 
@@ -83,27 +86,22 @@ int main(void) {
 
 
 	/* This exits when the controller is upnplugged */
-	while(1) {
-		struct input_event ev;
-		memset(&ev, 0, sizeof(ev));
+	while(read_event(in_joy_1, &ev) == 0) {
+		print_event(ev);
 
-		if (read(in_joy_1, &ev, sizeof(ev)) != sizeof(ev)) {
-			perror("End of the input stream!");
-			close(in_joy_1);
-			close(uinput);
-			return 0;
-		}
-
+		/*
 		if (write(uinput, &ev, sizeof ev) < 0) {
 			perror("Could not write to the output!");
 			close(in_joy_1);
 			close(uinput);
 			return -1;
-		}
+		}*/
 
 		fflush(stdout);
 	}
 
+	close(in_joy_1);
+	close(uinput);
 	return 0;
 }
 
@@ -119,5 +117,40 @@ static void setup_abs(int uinput, unsigned chan, int min, int max) {
 
 	if (ioctl(uinput, UI_ABS_SETUP, &s)) {
 		perror("UI_ABS_SETUP failed!");
+	}
+}
+
+int read_event(int fd, struct js_event *event) {
+    ssize_t bytes;
+
+    bytes = read(fd, event, sizeof(*event));
+
+    if (bytes == sizeof(*event))
+        return 0;
+
+    /* Error, could not read full event. */
+    return -1;
+}
+
+/* This can be used for testing and troubleshooting */
+void print_event(struct js_event event) {
+	switch (event.type) {
+		case JS_EVENT_BUTTON:
+			printf("Event type: %u; Event number: %u; Event value: %u; \n",
+					event.type, event.number, event.value);
+			break;
+
+		/*
+		case JS_EVENT_AXIS:
+			axis = get_axis_state(&event, axes);
+			if (axis < 3) {
+				printf("Axis %zu at (%6d, %6d)\n", axis, axes[axis].x, axes[axis].y);
+			}
+			break;
+			*/
+
+		default:
+			/* Ignore init events. */
+			break;
 	}
 }
