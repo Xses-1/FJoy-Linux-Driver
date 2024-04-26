@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -12,10 +13,16 @@ void print_js_event(struct js_event event);
 void print_uin_event (struct input_event uin_ev);
 void lock_file(int fd, struct flock* lock); 
 void unlock_file(int fd, struct flock* lock);
+int getJoystickNumber(char *device_string);
 
-int main(int argc, char* argv[]) {
-	int in_joy_1, in_joy_2, uinput;
+int main(void) {
+	int in_joy_1, in_joy_2, js_num_l, js_num_r, uinput;
 	fd_set set;
+
+	char *device_string = "Xses Framework Joystick Mouse Keyboard Thing";
+	char *right_device_string = "Xses Framework Joystick Mouse Keyboard Thing Right";
+	char js_path_l[20];
+	char js_path_r[20];
 
 	struct timeval timeout;
 	struct uinput_setup usetup;
@@ -30,25 +37,39 @@ int main(int argc, char* argv[]) {
     lock.l_start = 0;
     lock.l_len = 0; /* Lock the whole file */
 
-	/* Opening the inputs */
-	if (argc < 3) {
-		perror("Too few arguments!");
-		return -1;
-	}
+	/* Finding out which js is left and which is right */
+	js_num_l = getJoystickNumber(device_string);
+	js_num_r = getJoystickNumber(right_device_string);
 
 	/* 1 is left 2 is right */
-	in_joy_1 = open(argv[1], O_RDONLY);
-	in_joy_2 = open(argv[2], O_RDONLY);
+	if (js_num_l != -1) {
+        sprintf(js_path_l, "/dev/input/js%d", js_num_l);
+		in_joy_1 = open(js_path_l, O_RDONLY);
+
+    } else {
+        perror("Left joystick not found!");
+		return -1;
+    }
+
+	if (js_num_r != -1) {
+        sprintf(js_path_r, "/dev/input/js%d", js_num_r);
+		in_joy_2 = open(js_path_r, O_RDONLY);
+
+    } else {
+        perror("Right joystick not found!");
+		close(in_joy_1);
+		return -1;
+    }
 
 	if (in_joy_1 == -1) {
-		perror("Could not open the input joystick 1!");
+		perror("Could not open the left joystick!");
 		close(in_joy_1);
 		close(in_joy_2);
 		return -1;
 	}
 
 	if (in_joy_2 == -1) {
-		perror("Could not open the input joystick 2!");
+		perror("Could not open the right joystick!");
 		close(in_joy_1);
 		close(in_joy_2);
 		return -1;
@@ -396,4 +417,36 @@ void unlock_file(int fd, struct flock* lock) {
     }
 
 	close(fd);
+}
+
+/* Finding which joystick is left and which is right */
+int getJoystickNumber(char *device_string) {
+    FILE *file = fopen("/proc/bus/input/devices", "r");
+    if (file == NULL) {
+        printf("Could not open file\n");
+        return -1;
+    }
+
+    bool found_device = false;
+    char line[256];
+    int js_num = -1;
+
+    while (fgets(line, sizeof(line), file)) {
+        if (strstr(line, device_string) != NULL) {
+            found_device = true;
+        }
+
+        if (found_device && strlen(line) > 1) {
+            if (strstr(line, "event") != NULL && strstr(line, "js") != NULL) {
+                sscanf(strstr(line, "js"), "js%d", &js_num);
+                break;
+            }
+        } else if (strlen(line) == 1) {
+            found_device = false;
+        }
+    }
+
+    fclose(file);
+
+    return js_num;
 }
