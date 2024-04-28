@@ -30,15 +30,15 @@ int main(int argc, char* argv[]) {
     lock.l_start = 0;
     lock.l_len = 0; /* Lock the whole file */
 
-	/* Opening the inputs */
-	if (argc < 3) {
-		perror("Too few arguments!");
-		return -1;
-	}
-
 	/* 1 is left 2 is right */
-	in_joy_1 = open(argv[1], O_RDONLY);
-	in_joy_2 = open(argv[2], O_RDONLY);
+	if (argv[1] == "swap") {
+		in_joy_1 = open("/dev/input/js2", O_RDONLY);
+		in_joy_2 = open("/dev/input/js1", O_RDONLY);
+
+	} else {
+		in_joy_1 = open("/dev/input/js1", O_RDONLY);
+		in_joy_2 = open("/dev/input/js2", O_RDONLY);
+	}
 
 	if (in_joy_1 == -1) {
 		perror("Could not open the input joystick 1!");
