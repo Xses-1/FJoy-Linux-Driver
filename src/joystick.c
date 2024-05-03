@@ -19,8 +19,8 @@ int main(void) {
 	int in_joy_1, in_joy_2, js_num_l, js_num_r, uinput;
 	fd_set set;
 
-	char *device_string = "Xses Framework Joystick Mouse Keyboard Thing";
-	char *right_device_string = "Xses Framework Joystick Mouse Keyboard Thing Right";
+	static char *device_string = "Xses Framework Joystick Mouse Keyboard Thing";
+	static char *right_device_string = "Xses Framework Joystick Mouse Keyboard Thing Right";
 	char js_path_l[20];
 	char js_path_r[20];
 
@@ -122,7 +122,7 @@ int main(void) {
 	memset(&usetup, 0, sizeof(usetup));
 	usetup.id.bustype = BUS_USB;
 	usetup.id.vendor = 0x0042; /* sample vendor */
-	usetup.id.product = 0x0037; /* sample product */
+	usetup.id.product = 0x0069; /* sample product */
 	strcpy(usetup.name, "FJoys Emulated Unified Output");
 
 	if (ioctl(uinput, UI_DEV_SETUP, &usetup)) {
